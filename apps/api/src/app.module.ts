@@ -8,6 +8,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { FormsModule } from './forms/forms.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { SynchronizationModule } from './synchronization/synchronization.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { SynchronizationModule } from './synchronization/synchronization.module'
       load: [configuration],
     }),
     PrismaModule,
+    HealthModule,
     AuthModule,
     LeadsModule,
     DashboardModule,

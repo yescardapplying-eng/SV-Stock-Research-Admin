@@ -5,15 +5,19 @@ services:
     runtime: node
     plan: starter
     rootDir: .
-    buildCommand: npm install && npm run prisma:generate && npm run build:shared && npm run build:api
+    buildCommand: npm install && npm run build:shared && npm run prisma:generate && npm run build:api
     startCommand: npm run start:prod --workspace=@sv-crm/api
-    healthCheckPath: /api/sync/status
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
       - key: DATABASE_URL
+        fromDatabase:
+          name: sv-stock-crm-db
+          property: connectionString
+      - key: DIRECT_URL
         fromDatabase:
           name: sv-stock-crm-db
           property: connectionString
