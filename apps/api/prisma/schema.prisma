@@ -1,0 +1,265 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  AGENT
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  INTERESTED
+  FOLLOW_UP
+  CONVERTED
+  NOT_INTERESTED
+  REJECTED
+}
+
+enum SyncJobType {
+  HISTORICAL_IMPORT
+  INCREMENTAL_SYNC
+  RETRY_FAILED
+}
+
+enum SyncJobStatus {
+  PENDING
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+  FAILED
+}
+
+enum ActivityAction {
+  IMPORTED
+  STATUS_CHANGED
+  NOTE_ADDED
+  LEAD_UPDATED
+  FOLLOWUP_SCHEDULED
+  OVERRIDE_APPLIED
+  ARCHIVED
+  RESTORED
+}
+
+model AdminUser {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String
+  name         String
+  role         AdminRole     @default(ADMIN)
+  isActive     Boolean       @default(true)
+  lastLoginAt  DateTime?
+  sessions     AdminSession[]
+  notesCreated LeadNote[]
+  activities   LeadActivity[]
+  auditLogs    AuditLog[]
+  overrides    LeadOverride[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("admin_users")
+}
+
+model AdminSession {
+  id        String    @id @default(uuid())
+  adminId   String
+  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  @@index([adminId])
+  @@map("admin_sessions")
+}
+
+model WordPressSite {
+  id            String          @id @default(uuid())
+  identifier    String          @unique // e.g. 'sv-stock-research-main'
+  siteUrl       String          // e.g. 'https://svstockresearch.in'
+  webhookSecret String          // Shared HMAC secret for incoming webhooks
+  pullSecret    String          // Shared HMAC secret for historical entry exports
+  isActive      Boolean         @default(true)
+  forms         WordPressForm[]
+  sourceEntries SourceEntry[]
+  syncJobs      SyncJob[]
+  syncEvents    SyncEvent[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@map("wordpress_sites")
+}
+
+model WordPressForm {
+  id            String        @id @default(uuid())
+  siteId        String
+  site          WordPressSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  wpFormId      String        // Original WPForms form ID as string/int
+  formName      String        // e.g. 'Lead form sv stock'
+  formCategory  String?       // 'popup_lead', 'contact', 'consent', 'other'
+  isSyncActive  Boolean       @default(true)
+  lastSyncedAt  DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([siteId, wpFormId])
+  @@index([siteId])
+  @@map("wordpress_forms")
+}
+
+model SourceEntry {
+  id               String          @id @default(uuid())
+  siteId           String
+  site             WordPressSite   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  wpFormId         String
+  wpEntryId        String
+  formName         String
+  submittedAt      DateTime
+  sourceStatus     String          @default("active") // original WPForms status
+  originalFields   Json            // Immutable raw WPForms submitted data snapshot
+  normalizedFields Json            // Extracted common fields: fullName, phone, email, state, etc.
+  importedAt       DateTime        @default(now())
+  lead             LeadManagement?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([siteId, wpFormId, wpEntryId])
+  @@index([siteId, wpFormId])
+  @@index([submittedAt])
+  @@map("source_entries")
+}
+
+model LeadManagement {
+  id              String         @id @default(uuid())
+  sourceEntryId   String         @unique
+  sourceEntry     SourceEntry    @relation(fields: [sourceEntryId], references: [id], onDelete: Cascade)
+  status          LeadStatus     @default(NEW)
+  isArchived      Boolean        @default(false)
+  archivedAt      DateTime?
+  nextFollowupAt  DateTime?
+  lastContactedAt DateTime?
+  assignedAdminId String?
+  notes           LeadNote[]
+  activities      LeadActivity[]
+  overrides       LeadOverride[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([status])
+  @@index([isArchived])
+  @@index([nextFollowupAt])
+  @@index([createdAt])
+  @@map("lead_management")
+}
+
+model LeadOverride {
+  id               String         @id @default(uuid())
+  leadId           String
+  lead             LeadManagement @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  fieldKey         String         // e.g. 'phone', 'fullName', 'state'
+  originalValue    String?
+  correctedValue   String
+  updatedByAdminId String?
+  updatedBy        AdminUser?     @relation(fields: [updatedByAdminId], references: [id], onDelete: SetNull)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([leadId, fieldKey])
+  @@index([leadId])
+  @@map("lead_overrides")
+}
+
+model LeadNote {
+  id               String         @id @default(uuid())
+  leadId           String
+  lead             LeadManagement @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  note             String
+  createdByAdminId String?
+  createdBy        AdminUser?     @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([leadId])
+  @@map("lead_notes")
+}
+
+model LeadActivity {
+  id                 String         @id @default(uuid())
+  leadId             String
+  lead               LeadManagement @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  action             ActivityAction
+  description        String
+  metadata           Json?
+  performedByAdminId String?
+  performedBy        AdminUser?     @relation(fields: [performedByAdminId], references: [id], onDelete: SetNull)
+  createdAt          DateTime       @default(now())
+
+  @@index([leadId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("lead_activities")
+}
+
+model SyncJob {
+  id               String        @id @default(uuid())
+  siteId           String
+  site             WordPressSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  jobType          SyncJobType   @default(HISTORICAL_IMPORT)
+  status           SyncJobStatus @default(PENDING)
+  totalRecords     Int           @default(0)
+  processedRecords Int           @default(0)
+  failedRecords    Int           @default(0)
+  cursor           String?       // Entry ID or timestamp cursor for resuming
+  startedAt        DateTime?
+  completedAt      DateTime?
+  errorDetails     String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([siteId, status])
+  @@index([jobType])
+  @@map("sync_jobs")
+}
+
+model SyncEvent {
+  id          String        @id @default(uuid())
+  siteId      String
+  site        WordPressSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  eventId     String        // Unique event ID generated at WordPress outbox
+  eventType   String        @default("wpforms_submission")
+  payload     Json
+  status      String        @default("PROCESSED") // 'RECEIVED', 'PROCESSED', 'FAILED'
+  retryCount  Int           @default(0)
+  lastError   String?
+  processedAt DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@unique([siteId, eventId])
+  @@index([siteId, status])
+  @@map("sync_events")
+}
+
+model AuditLog {
+  id         String     @id @default(uuid())
+  adminId    String?
+  admin      AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  action     String     // e.g. 'ADMIN_LOGIN', 'STATUS_CHANGE', 'LEAD_ARCHIVE', 'EXPORT_CSV'
+  entityType String     // e.g. 'Lead', 'SyncJob', 'Admin'
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime   @default(now())
+
+  @@index([adminId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
