@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name:       SV Stock CRM Bridge
+ * Plugin Name:       SV Stock Research Bridge
  * Plugin URI:        https://svstockresearch.in
- * Description:       Enterprise Bridge connecting WPForms (1.9.1.4+) directly and immutably to Render-hosted SV Stock Research CRM.
+ * Description:       Enterprise Bridge connecting WPForms (1.9.1.4+) directly and immutably to SV Stock Research Platform.
  * Version:           1.0.0
  * Requires at least: 6.0
  * Requires PHP:      8.0

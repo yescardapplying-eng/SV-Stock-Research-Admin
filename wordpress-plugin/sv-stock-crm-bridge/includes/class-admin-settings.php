@@ -17,8 +17,8 @@ class SV_Stock_CRM_Admin_Settings {
 
     public function add_menu(): void {
         add_options_page(
-            __('SV Stock CRM Bridge', 'sv-stock-crm-bridge'),
-            __('SV Stock CRM', 'sv-stock-crm-bridge'),
+            __('SV Stock Research Bridge', 'sv-stock-crm-bridge'),
+            __('SV Stock Research Bridge', 'sv-stock-crm-bridge'),
             'manage_options',
             'sv-stock-crm-settings',
             array($this, 'render_page')
@@ -160,17 +160,17 @@ class SV_Stock_CRM_Admin_Settings {
         }
         ?>
         <div class="wrap">
-            <h1><?php echo esc_html__('SV Stock CRM Bridge Settings', 'sv-stock-crm-bridge'); ?></h1>
-            <p><?php echo esc_html__('Connects WPForms 1.9.1.4 submissions directly and immutably to Render-hosted SV Stock Research CRM.', 'sv-stock-crm-bridge'); ?></p>
+            <h1><?php echo esc_html__('SV Stock Research Bridge Settings', 'sv-stock-crm-bridge'); ?></h1>
+            <p><?php echo esc_html__('Connects WPForms 1.9.1.4 submissions directly and immutably to SV Stock Research Platform.', 'sv-stock-crm-bridge'); ?></p>
 
             <!-- 1. Historical Sync Card -->
             <div style="background: #fff; border: 1px solid #10b981; border-left: 5px solid #10b981; padding: 20px; margin: 20px 0; max-width: 800px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                 <h2 style="margin-top: 0; color: #065f46; display: flex; align-items: center; gap: 8px;">
-                    <span>📥</span> <?php echo esc_html__('Historical WPForms Leads Import to CRM', 'sv-stock-crm-bridge'); ?>
+                    <span>📥</span> <?php echo esc_html__('Historical WPForms Leads Import to Platform', 'sv-stock-crm-bridge'); ?>
                 </h2>
                 <p>
                     WordPress database me total <strong><?php echo esc_html(number_format_i18n($total_historical)); ?></strong> WPForms entries exist karti hain (Lead form sv stock, Contact, Consent).
-                    Aap ek click me sabhi existing leads ko Render CRM me safe aur idempotent tarike se import kar sakte hain.
+                    Aap ek click me sabhi existing leads ko SV Stock Research Platform me safe aur idempotent tarike se import kar sakte hain.
                 </p>
 
                 <div id="sv-crm-progress-container" style="display: none; margin: 15px 0;">
@@ -183,7 +183,7 @@ class SV_Stock_CRM_Admin_Settings {
 
                 <div style="margin-top: 15px;">
                     <button type="button" id="sv-crm-start-import-btn" class="button button-primary" style="background: #10b981; border-color: #059669; font-weight: 600; padding: 4px 16px; height: 34px;">
-                        🚀 <?php esc_html_e('Sync All Existing Leads to CRM (1,800+ leads)', 'sv-stock-crm-bridge'); ?>
+                        🚀 <?php esc_html_e('Sync All Existing Leads to Platform (1,800+ leads)', 'sv-stock-crm-bridge'); ?>
                     </button>
                     <span id="sv-crm-spinner" class="spinner" style="float: none; margin-left: 8px; vertical-align: middle;"></span>
                 </div>
