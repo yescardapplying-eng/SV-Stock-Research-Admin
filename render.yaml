@@ -5,7 +5,7 @@ services:
     runtime: node
     plan: free
     rootDir: .
-    buildCommand: npm install && npm run build:shared && npm run prisma:generate && npm run build:api
+    buildCommand: npm install --include=dev && npm run build:shared && npm run prisma:generate && npm run build:api
     startCommand: npm run start:prod --workspace=@sv-crm/api
     healthCheckPath: /api/health
     envVars:
@@ -40,7 +40,7 @@ services:
     runtime: node
     plan: free
     rootDir: .
-    buildCommand: npm install && npm run build:shared && npm run build:admin
+    buildCommand: npm install --include=dev && npm run build:shared && npm run build:admin
     startCommand: npm run start --workspace=@sv-crm/admin
     envVars:
       - key: NODE_ENV
