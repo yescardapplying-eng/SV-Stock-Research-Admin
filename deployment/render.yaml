@@ -3,7 +3,7 @@ services:
   - type: web
     name: sv-stock-crm-api
     runtime: node
-    plan: starter
+    plan: free
     rootDir: .
     buildCommand: npm install && npm run build:shared && npm run prisma:generate && npm run build:api
     startCommand: npm run start:prod --workspace=@sv-crm/api
@@ -14,13 +14,9 @@ services:
       - key: PORT
         value: 10000
       - key: DATABASE_URL
-        fromDatabase:
-          name: sv-stock-crm-db
-          property: connectionString
+        sync: false
       - key: DIRECT_URL
-        fromDatabase:
-          name: sv-stock-crm-db
-          property: connectionString
+        sync: false
       - key: ADMIN_APP_ORIGIN
         value: https://sv-stock-crm-admin.onrender.com
       - key: AUTH_SECRET
@@ -42,7 +38,7 @@ services:
   - type: web
     name: sv-stock-crm-admin
     runtime: node
-    plan: starter
+    plan: free
     rootDir: .
     buildCommand: npm install && npm run build:shared && npm run build:admin
     startCommand: npm run start --workspace=@sv-crm/admin
@@ -51,11 +47,3 @@ services:
         value: production
       - key: NEXT_PUBLIC_API_URL
         value: https://sv-stock-crm-api.onrender.com
-
-# 3. PostgreSQL Database Instance
-databases:
-  - name: sv-stock-crm-db
-    plan: starter
-    databaseName: sv_stock_crm
-    user: sv_crm_admin
-    postgresMajorVersion: 16
