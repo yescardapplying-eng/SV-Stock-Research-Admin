@@ -14,7 +14,8 @@
     "test": "jest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:deploy": "prisma migrate deploy",
+    "provision:admin": "ts-node src/scripts/provision-admin.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
