@@ -1,0 +1,41 @@
+export declare enum LeadStatus {
+    NEW = "NEW",
+    CONTACTED = "CONTACTED",
+    INTERESTED = "INTERESTED",
+    FOLLOW_UP = "FOLLOW_UP",
+    CONVERTED = "CONVERTED",
+    NOT_INTERESTED = "NOT_INTERESTED",
+    REJECTED = "REJECTED"
+}
+export declare enum SyncJobType {
+    HISTORICAL_IMPORT = "HISTORICAL_IMPORT",
+    INCREMENTAL_SYNC = "INCREMENTAL_SYNC",
+    RETRY_FAILED = "RETRY_FAILED"
+}
+export declare enum SyncJobStatus {
+    PENDING = "PENDING",
+    IN_PROGRESS = "IN_PROGRESS",
+    PAUSED = "PAUSED",
+    COMPLETED = "COMPLETED",
+    FAILED = "FAILED"
+}
+export declare enum ActivityAction {
+    IMPORTED = "IMPORTED",
+    STATUS_CHANGED = "STATUS_CHANGED",
+    NOTE_ADDED = "NOTE_ADDED",
+    LEAD_UPDATED = "LEAD_UPDATED",
+    FOLLOWUP_SCHEDULED = "FOLLOWUP_SCHEDULED",
+    OVERRIDE_APPLIED = "OVERRIDE_APPLIED",
+    ARCHIVED = "ARCHIVED",
+    RESTORED = "RESTORED"
+}
+export declare enum AdminRole {
+    SUPER_ADMIN = "SUPER_ADMIN",
+    ADMIN = "ADMIN",
+    AGENT = "AGENT"
+}
+export declare enum DeliveryStatus {
+    PENDING = "PENDING",
+    DELIVERED = "DELIVERED",
+    FAILED = "FAILED"
+}
