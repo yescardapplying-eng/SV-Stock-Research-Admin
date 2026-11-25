@@ -15,6 +15,7 @@ import { HealthModule } from './health/health.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
+      envFilePath: ['.env', 'apps/api/.env', '../../.env'],
     }),
     PrismaModule,
     HealthModule,
