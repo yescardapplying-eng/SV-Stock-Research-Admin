@@ -33,6 +33,7 @@ apps/api/prisma/*.db
 apps/api/prisma/*.db-journal
 
 # WordPress generated & uploads
+wordpress-plugin/*.zip
 wordpress-plugin/sv-stock-crm-bridge/*.zip
 
 # IDE & OS
