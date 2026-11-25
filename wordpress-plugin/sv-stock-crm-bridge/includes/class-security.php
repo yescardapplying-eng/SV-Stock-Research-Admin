@@ -27,7 +27,7 @@ class SV_Stock_CRM_Security {
         if (defined('SV_STOCK_CRM_BACKEND_URL') && SV_STOCK_CRM_BACKEND_URL) {
             return rtrim(SV_STOCK_CRM_BACKEND_URL, '/');
         }
-        return rtrim((string) get_option('sv_stock_crm_backend_url', 'http://localhost:4000'), '/');
+        return rtrim((string) get_option('sv_stock_crm_backend_url', 'https://sv-stock-crm-api.onrender.com'), '/');
     }
 
     public static function get_site_identifier(): string {

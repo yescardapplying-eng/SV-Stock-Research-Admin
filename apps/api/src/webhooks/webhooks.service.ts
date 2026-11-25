@@ -57,18 +57,28 @@ export class WebhooksService {
 
       if (label.includes('name')) {
         normalized.fullName = typeof val === 'object' ? `${val.first || ''} ${val.last || ''}`.trim() : String(val);
-      } else if (label.includes('phone') || label.includes('mobile') || label.includes('contact')) {
+      } else if (label.includes('phone') || label.includes('mobile') || label.includes('contact') || label.includes('number') || label.includes('whatsapp')) {
         normalized.phone = normalizeIndianPhoneNumber(String(val));
-      } else if (label.includes('email')) {
+      } else if (label.includes('email') || label.includes('mail')) {
         normalized.email = String(val).trim().toLowerCase();
-      } else if (label.includes('state')) {
+      } else if (label.includes('state') || label.includes('city') || label.includes('location')) {
         normalized.state = String(val).trim();
-      } else if (label.includes('segment') || label.includes('trading segment')) {
+      } else if (label.includes('segment')) {
         normalized.tradingSegment = String(val).trim();
-      } else if (label.includes('capital') || label.includes('investment')) {
+      } else if (label.includes('capital') || label.includes('invest')) {
         normalized.tradingCapital = String(val).trim();
       } else if (label.includes('message') || label.includes('comment')) {
         normalized.message = String(val).trim();
+      }
+
+      // Fallback: If phone is still not detected, check if value itself looks like an Indian 10-digit mobile number
+      if (!normalized.phone && typeof val === 'string') {
+        const cleanDigits = val.replace(/\D/g, '');
+        if (cleanDigits.length === 10 && /^[6-9]/.test(cleanDigits)) {
+          normalized.phone = normalizeIndianPhoneNumber(val);
+        } else if (cleanDigits.length > 10 && (cleanDigits.startsWith('91') || cleanDigits.startsWith('0'))) {
+          normalized.phone = normalizeIndianPhoneNumber(val);
+        }
       }
     }
 
@@ -240,5 +250,123 @@ export class WebhooksService {
 
     this.logger.log(`Successfully ingested WPForms submission: Form ${formId}, Entry ${entryId}`);
     return { success: true, leadId: result.lead.id };
+  }
+
+  async processIncomingWPFormsBatch(
+    payload: { siteIdentifier?: string; entries: any[] },
+    headers: {
+      timestamp?: string;
+      siteIdentifier?: string;
+      signature?: string;
+      requestId?: string;
+    },
+    rawBody: string,
+  ) {
+    const configuredSecret = this.configService.get<string>('wpWebhookSecret');
+    const configuredSiteId = this.configService.get<string>('wpSiteIdentifier', 'sv-stock-research-main');
+
+    if (configuredSecret) {
+      const isValid = this.verifySignature(
+        rawBody,
+        headers.signature || '',
+        headers.timestamp || '',
+        configuredSecret,
+      );
+      if (!isValid) {
+        throw new UnauthorizedException('Invalid or expired HMAC webhook signature');
+      }
+    }
+
+    const { siteIdentifier = configuredSiteId, entries = [] } = payload;
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return { success: true, processed: 0, skipped: 0 };
+    }
+
+    let site = await this.prisma.wordPressSite.findUnique({
+      where: { identifier: siteIdentifier },
+    });
+    if (!site) {
+      site = await this.prisma.wordPressSite.create({
+        data: {
+          identifier: siteIdentifier,
+          siteUrl: this.configService.get<string>('wpSiteUrl', 'https://svstockresearch.in'),
+          webhookSecret: configuredSecret || 'pending_secret',
+          pullSecret: this.configService.get<string>('wpPullSecret', 'pending_pull_secret'),
+        },
+      });
+    }
+
+    let processed = 0;
+    let skipped = 0;
+
+    for (const item of entries) {
+      const { formId, formName, entryId, submittedAt, fields = {} } = item;
+      if (!formId || !entryId) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        await this.prisma.wordPressForm.upsert({
+          where: {
+            siteId_wpFormId: {
+              siteId: site.id,
+              wpFormId: String(formId),
+            },
+          },
+          create: {
+            siteId: site.id,
+            wpFormId: String(formId),
+            formName: formName || `Form #${formId}`,
+            lastSyncedAt: new Date(),
+          },
+          update: {
+            formName: formName || undefined,
+            lastSyncedAt: new Date(),
+          },
+        });
+
+        const normalizedFields = this.normalizeWPFormsFields(fields);
+        const parsedSubmissionDate = submittedAt ? new Date(submittedAt) : new Date();
+
+        const sourceEntry = await this.prisma.sourceEntry.upsert({
+          where: {
+            siteId_wpFormId_wpEntryId: {
+              siteId: site.id,
+              wpFormId: String(formId),
+              wpEntryId: String(entryId),
+            },
+          },
+          create: {
+            siteId: site.id,
+            wpFormId: String(formId),
+            wpEntryId: String(entryId),
+            formName: formName || `Form #${formId}`,
+            submittedAt: parsedSubmissionDate,
+            originalFields: fields,
+            normalizedFields,
+          },
+          update: {},
+        });
+
+        await this.prisma.leadManagement.upsert({
+          where: { sourceEntryId: sourceEntry.id },
+          create: {
+            sourceEntryId: sourceEntry.id,
+            status: LeadStatus.NEW,
+            isArchived: false,
+          },
+          update: {},
+        });
+
+        processed++;
+      } catch (err: any) {
+        this.logger.warn(`Batch item error for entry ${entryId}: ${err.message}`);
+        skipped++;
+      }
+    }
+
+    this.logger.log(`Batch processed: ${processed} ingested, ${skipped} skipped.`);
+    return { success: true, processed, skipped };
   }
 }

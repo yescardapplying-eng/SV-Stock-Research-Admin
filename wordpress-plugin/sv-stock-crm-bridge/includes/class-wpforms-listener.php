@@ -41,8 +41,12 @@ class SV_Stock_CRM_WPForms_Listener {
             SV_Stock_CRM_Outbox::enqueue((string) $form_id, (string) $entry_id, $payload);
             SV_Stock_CRM_Logger::info("WPForms submission enqueued to outbox: Form {$form_id}, Entry {$entry_id}");
 
-            // Trigger non-blocking async dispatch
-            wp_schedule_single_event(time(), 'sv_stock_crm_dispatch_outbox_cron');
+            // Immediate real-time delivery attempt (fast path)
+            $client = new SV_Stock_CRM_Webhook_Client();
+            $client->dispatch_pending_outbox(5);
+
+            // Fallback scheduled event for retry if server was asleep
+            wp_schedule_single_event(time() + 60, 'sv_stock_crm_dispatch_outbox_cron');
 
         } catch (Throwable $e) {
             SV_Stock_CRM_Logger::error("Error capturing WPForms submission: " . $e->getMessage(), array(
